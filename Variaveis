@@ -1,0 +1,12 @@
+var_nome = ""
+var_n1 = 0
+var_n2 = 0
+var_media = 0
+
+var_nome = input ("Digite seu nome: ")
+var_n1   = input ("Digite a primeira nota: ")
+var_n2   = input ("Digite a segunda nota: ")
+
+var_media = (int(var_n1) + int(var_n2)) / 2
+
+print ("Média ", var_nome, " = " , var_media)
