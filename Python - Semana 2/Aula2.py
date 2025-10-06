@@ -83,7 +83,9 @@ estoque={
 }
 
 if produto in estoque:
-    print("Preço do produto", produto, "=", estoque [produto])
+    preco = estoque[produto]
+    #print("Preço do produto", produto, "=", estoque [produto])
+    print(f"O preço de {produto} é R$ {preco}")
 else:
     print(produto, "não cadastrado(a)")
 

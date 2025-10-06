@@ -14,3 +14,5 @@ print ('Resto', 5%2)
 '''
 print ('Potencia 3', 3 * 3 * 3)
 print ('Potencia 3', 3 ** 4)
+#%%
+print ('*' * 80)
