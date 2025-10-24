@@ -1,0 +1,100 @@
+#Collab
+# @title LER DADOS
+#%%
+
+import pandas as pd
+
+origem = 'https://raw.githubusercontent.com/ivansanchespetrucci/python-pandas/refs/heads/main/base_automoveis.csv'
+
+dados = pd.read_csv(origem)
+
+dados
+
+#%%
+dados.head()    # apresenta os 5 primeiros
+dados.head(15)  # apresenta os 15 primeiros
+dados.tail()    # apresenta os 5 últimos
+dados.tail(10)  # apresenta os 10 últimos
+
+# pode executar somente uma linha, selecionando somente a linha desejada
+#%%
+# @title TIPOS DADOS
+
+type(dados)
+dados.shape
+dados.columns
+dados.info()
+dados.describe()
+#%%
+# @title EXPLORAR DADOS
+
+dados['montadora']
+
+dados[['montadora', 'modelo']]
+#%%
+# @title ANÁLISE DADOS (EDA)
+
+dados['valor_mercado'].mean()
+
+#%%
+dados.groupby('montadora').mean(numeric_only=True)
+
+dados.groupby('montadora')['valor_mercado'].mean()
+#%%
+dados.groupby('montadora')[['valor_mercado']].mean().sort_values('valor_mercado',ascending=False)
+#%%
+dados_montadora = dados.groupby('montadora')[['valor_mercado']].mean().sort_values('valor_mercado',ascending=False)
+
+dados_montadora.plot(kind='barh', figsize=(10,5), color='blue')
+
+#%%
+dados.montadora.value_counts()
+
+#%%
+
+dados.montadora.value_counts(normalize=True)
+#%%
+# @title VALORES NULOS
+
+dados.isnull().sum()
+dados = dados.fillna(0)
+#%%
+# @title APLICAR FILTROS
+
+dados.montadora.unique()
+filtro = ['Toyota', 'Honda', 'Ford']
+dados.query('montadora == "Ford"')
+dados.query('@filtro in montadora')
+dados.query('@filtro not in montadora')
+dados_pesq = dados.query('@filtro in montadora')
+dados_pesq
+
+dados_montadora = dados_pesq.groupby('montadora')[['valor_mercado']].mean().sort_values('valor_mercado',ascending=False)
+dados_montadora.plot(kind='barh', figsize=(10,5), color='blue')
+
+dados_pesq.montadora.value_counts(normalize=True)
+
+dados_filtro_ano = dados_pesq['ano_fabricacao'] >= 2021
+dados_pesq[dados_filtro_ano]
+
+dados_filtro_valor = dados_pesq['valor_mercado'] >= 40000
+dados_pesq[dados_filtro_valor]
+
+dados_filtro_final = (dados_filtro_ano) & (dados_filtro_valor)
+dados_pesq[dados_filtro_final]
+
+selecao = dados_pesq.query('ano_fabricacao > 2020 and valor_mercado >= 30000')
+selecao
+
+#%%
+
+# @title SALVAR DADOS
+
+selecao.to_csv('pesq_claudio.csv',index=False)
+
+pd.read_csv('pesq_claudio.csv')
+# o separador default é a virgula
+
+selecao.to_csv('pesq_claudio.csv',index=False,sep=';')
+
+pd.read_csv('pesq_claudio.csv', sep=';')
