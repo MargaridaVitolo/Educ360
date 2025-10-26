@@ -1,0 +1,208 @@
+
+ Semana 5.ipynb_
+Atividade 1
+
+ 
+[ ]
+import pandas as pdimport matplotlib.pyplot as pltdf = pd.read_csv('https://raw.githubusercontent.com/profivan-ai/cdb-Python/refs/heads/main/arquivos/vendas_loja.csv',sep=',')df.info()
+
+ <class 'pandas.core.frame.DataFrame'>
+RangeIndex: 50 entries, 0 to 49
+Data columns (total 6 columns):
+ #   Column     Non-Null Count  Dtype  
+---  ------     --------------  -----  
+ 0   ID         50 non-null     int64  
+ 1   Produto    50 non-null     object 
+ 2   Categoria  50 non-null     object 
+ 3   Regiao     49 non-null     object 
+ 4   Vendas     44 non-null     float64
+ 5   Mes        50 non-null     object 
+dtypes: float64(1), int64(1), object(4)
+memory usage: 2.5+ KB
+ 
+[ ]
+# verificar nulosdf.isnull().sum()
+
+ 
+ 
+[ ]
+# preencher Região com 'Não informadodf['Regiao'] = df['Regiao'].fillna('Não Informado')
+
+ 
+[ ]
+#preencher com a média a coluna de Vendas que esteja nula# df['Vendas'].fillna(df['Vendas'].mean(), inplace=True)# código abaixo para eliminar o warning do inplace=True# df['Vendas'] = df['Vendas'].fillna(df['Vendas'].mean())# preencher com zerosdf['Vendas'] = df['Vendas'].fillna(0)display(df.isnull().sum())
+
+ 
+ 
+[ ]
+# gráfico de barras com o total de vendas por categoria
+
+df.groupby('Categoria')['Vendas'].sum().plot(
+    kind='bar',
+    color='lightskyblue',
+    figsize=(8,4),
+    title='Total de Vendas por Categoria',
+    xlabel='Categoria',
+    ylabel='Total de vendas (R$)'
+    )
+
+plt.xticks(rotation=0) # label do eixo x na horizontal
+plt.tight_layout()
+plt.show()
+ 
+ 
+[ ]
+# gráfico de pizza com a distribuição de vendas por região
+df.groupby('Regiao')['Vendas'].sum().plot(
+    kind='pie',
+    figsize=(8,5),
+    title='Distribuição de Vendas por Região',
+    ylabel= '',
+    autopct='%1.1f%%',
+    colors=['lightcoral', 'lightskyblue', 'gold', 'lightgreen', 'silver','cyan'] # Added a list of colors
+
+)
+plt.tight_layout()
+plt.show()
+ 
+ 
+[ ]
+# gráfico de linhas com a evolução das vendas ao longo dos meses, com meses ordenados
+# Define a ordem dos meses
+import numpy as np
+meses = np.arange(0, 12)  # números de 1 a 12 para os meses
+nomes_meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+#observed=False para eliminar o warning
+ax=df.groupby('Mes',observed=False)['Vendas'].sum().sort_index().plot(
+    kind='line',
+    legend=True,
+    figsize=(8,5),
+    title='Evolução de Vendas ao Longo dos Meses',
+    xlabel='Meses',
+    ylabel='Vendas',
+    marker='o'
+)
+ax.grid(True, linestyle='--', alpha=0.6) # Added grid
+plt.xticks(meses, nomes_meses) 
+plt.tight_layout()
+plt.show()
+
+
+ 
+Atividade 2
+
+ 
+[ ]
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df2 = pd.read_csv('https://raw.githubusercontent.com/profivan-ai/cdb-Python/refs/heads/main/arquivos/pacientes.csv',sep=',')
+df2.info()
+
+ <class 'pandas.core.frame.DataFrame'>
+RangeIndex: 70 entries, 0 to 69
+Data columns (total 8 columns):
+ #   Column   Non-Null Count  Dtype  
+---  ------   --------------  -----  
+ 0   ID       70 non-null     int64  
+ 1   Nome     70 non-null     object 
+ 2   Idade    70 non-null     int64  
+ 3   Genero   70 non-null     object 
+ 4   Peso     70 non-null     int64  
+ 5   Glicose  62 non-null     float64
+ 6   Pressao  65 non-null     float64
+ 7   Mes      70 non-null     object 
+dtypes: float64(2), int64(3), object(3)
+memory usage: 4.5+ KB
+ 
+[ ]
+# verificar nulos
+df2.isnull().sum()
+
+#valores nulos em glicose e pressao serão preenchidos com a média
+# código abaixo para eliminar o warning do inplace=True
+df2['Glicose'] = df2['Glicose'].fillna(df2['Glicose'].mean())
+df2['Pressao'] = df2['Pressao'].fillna(df2['Pressao'].mean())
+
+df2.isnull().sum()
+ 
+ 
+[ ]
+def faixa_etaria(Idade):
+    if Idade <= 30:
+        return 'Até 30'
+    elif Idade > 30 and Idade <= 40:
+        return '31 - 40'
+    elif Idade > 40 and Idade <= 50:
+        return '41 - 50'
+    elif Idade > 50 and Idade <= 60:
+        return '51 - 60'
+    else:
+        return '60+'
+ 
+[ ]
+glicose_idade=df2.groupby(df2['Idade'].apply(faixa_etaria))['Glicose'].mean()
+print(glicose_idade)
+ Idade
+31 - 40     93.958710
+41 - 50    101.393888
+51 - 60    108.096774
+60+        109.580645
+Até 30      86.400000
+Name: Glicose, dtype: float64
+ 
+[ ]
+# gráfico de barras com a média de glicose por faixa etária
+import numpy as np
+#define a ordem do eixo x (de acordo com a idade)
+fx_etaria_ordem = ['Até 30', '31 - 40', '41 - 50', '51 - 60', '60+']
+
+# Reordenar usando a variável criada glicose_idade
+glicose_idade = glicose_idade.reindex(fx_etaria_ordem)
+
+ax=glicose_idade.plot(
+    kind='bar',
+    color='lightskyblue',
+    figsize=(8,4),
+    title='Média de Glicose por Faixa Etária',
+    xlabel='Faixa Etária',
+    ylabel='Glicose (mg/dL)'
+    )
+
+plt.xticks(rotation=0) # label do eixo x na horizontal
+ax.grid(True, linestyle='--', alpha=0.6) 
+# apresentar o label com a média no topo de cada barra
+for container in ax.containers:
+  ax.bar_label(container,fmt='%.1f')  
+plt.tight_layout()
+plt.show()
+
+
+
+ 
+ 
+[ ]
+# gráfico de pizza com a proporção de pacientes por gênero
+df2.groupby('Genero')['Genero'].count().plot(
+    kind='pie',
+    figsize=(8,5),
+    title='Distribuição de Pacientes por Gênero',
+    ylabel= '',
+    autopct='%1.1f%%',
+    colors=['lightcoral', 'lightskyblue'],
+    startangle=270,
+)
+plt.tight_layout()
+plt.show()
+
+ 
+ 
+[ ]
+# Gráfico de linhas com a Evolução média da pressão arterial por mêsimport numpy as npmeses = np.arange(0, 12)  # números de 1 a 12 para os mesesordem_meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]# Transformar a coluna Mes em categoria ordenadadf2['Mes'] = pd.Categorical(df2['Mes'], categories=ordem_meses, ordered=True)# observed=False para eliminar o warning# Agrupar e somar as vendas por mêsdf2_med_mes = df2.groupby('Mes', observed=False)['Pressao'].mean()df2_med_mes = df2_med_mes.sort_index().reset_index()#display(df2_med_mes)# Ordenar pelo índice da categoria (a ordem dos meses)df2_med_mes = df2_med_mes.sort_index() ax=df2_med_mes.plot(    kind='line',    legend=True,    figsize=(8,5),    title='Evolução Média da Pressão Arterial por Mês',    xlabel='Meses',    ylabel='Pressão arterial (mg/dL)',    marker='o')ax.grid(True, linestyle='--', alpha=0.6)plt.tight_layout()plt.xticks(meses, ordem_meses) plt.show()# Define a ordem dos meses
+
+ 
+Produtos pagos do Colab - Cancelar contratos
+**kwargs: Any, Make plots of Series or DataFrame. Uses the backend specified by the option `plotting.backend`. By default, matplotlib is used. Parameters ---------- data : Series or DataFrame &nbsp;&nbsp;&nbsp;&nbsp;The object for which the method is called. x : label or position, default None &nbsp;&nbsp;&nbsp;&nbsp;Only used if data is a DataFrame. y : label, position or list of label, positions, default None &nbsp;&nbsp;&nbsp;&nbsp;Allows plotting of one column versus another. Only used if data is a DataFrame. kind : str &nbsp;&nbsp;&nbsp;&nbsp;The kind of plot to produce: - 'line' : line plot (default) - 'bar' : vertical bar plot - 'barh' : horizontal bar plot - 'hist' : histogram - 'box' : boxplot - 'kde' : Kernel Density Estimation plot - 'density' : same as 'kde' - 'area' : area plot - 'pie' : pie plot - 'scatter' : scatter plot (DataFrame only) - 'hexbin' : hexbin plot (DataFrame only) ax : matplotlib axes object, default None An axes of the current figure. subplots : bool or sequence of iterables, default False Whether to group columns into subplots: - `False` : No subplots will be used - `True` : Make separate subplots for each column. - sequence of iterables of column labels: Create a subplot for each group of columns. For example `[('a', 'c'), ('b', 'd')]` will create 2 subplots: one with columns 'a' and 'c', and one with columns 'b' and 'd'. Remaining columns that aren't specified will be plotted in additional subplots (one per column). sharex : bool, default True if ax is None else False &nbsp;&nbsp;&nbsp;&nbsp;In case `subplots=True`, share x axis and set some x axis labels to invisible; defaults to True if ax is None otherwise False if an ax is passed in; Be aware, that passing in both an ax and `sharex=True` will alter all x axis labels for all axis in a figure. sharey : bool, default False &nbsp;&nbsp;&nbsp;&nbsp;In case `subplots=True`, share y axis and set some y axis labels to invisible. layout : tuple, optional &nbsp;&nbsp;&nbsp;&nbsp;(rows, columns) for the layout of subplots. figsize : a tuple (width, height) in inches &nbsp;&nbsp;&nbsp;&nbsp;Size of a figure object. use\_index : bool, default True &nbsp;&nbsp;&nbsp;&nbsp;Use index as ticks for x axis. title : str or list &nbsp;&nbsp;&nbsp;&nbsp;Title to use for the plot. If a string is passed, print the string at the top of the figure. If a list is passed and `subplots` is True, print each item in the list above the corresponding subplot. grid : bool, default None (matlab style default) &nbsp;&nbsp;&nbsp;&nbsp;Axis grid lines. legend : bool or {'reverse'} &nbsp;&nbsp;&nbsp;&nbsp;Place legend on axis subplots. style : list or dict &nbsp;&nbsp;&nbsp;&nbsp;The matplotlib line style per column. logx : bool or 'sym', default False &nbsp;&nbsp;&nbsp;&nbsp;Use log scaling or symlog scaling on x axis. logy : bool or 'sym' default False &nbsp;&nbsp;&nbsp;&nbsp;Use log scaling or symlog scaling on y axis. loglog : bool or 'sym', default False &nbsp;&nbsp;&nbsp;&nbsp;Use log scaling or symlog scaling on both x and y axes. xticks : sequence &nbsp;&nbsp;&nbsp;&nbsp;Values to use for the xticks. yticks : sequence &nbsp;&nbsp;&nbsp;&nbsp;Values to use for the yticks. xlim : 2-tuple/list &nbsp;&nbsp;&nbsp;&nbsp;Set the x limits of the current axes. ylim : 2-tuple/list &nbsp;&nbsp;&nbsp;&nbsp;Set the y limits of the current axes. xlabel : label, optional &nbsp;&nbsp;&nbsp;&nbsp;Name to use for the xlabel on x-axis. Default uses index name as xlabel, or the x-column name for planar plots. ylabel : label, optional &nbsp;&nbsp;&nbsp;&nbsp;Name to use for the ylabel on y-axis. Default will show no ylabel, or the y-column name for planar plots. rot : float, default None &nbsp;&nbsp;&nbsp;&nbsp;Rotation for ticks (xticks for vertical, yticks for horizontal plots). fontsize : float, default None &nbsp;&nbsp;&nbsp;&nbsp;Font size for xticks and yticks. colormap : str or matplotlib colormap object, default None &nbsp;&nbsp;&nbsp;&nbsp;Colormap to select colors from. If string, load colormap with that name from matplotlib. colorbar : bool, optional &nbsp;&nbsp;&nbsp;&nbsp;If True, plot colorbar (only relevant for 'scatter' and 'hexbin' plots). position : float &nbsp;&nbsp;&nbsp;&nbsp;Specify relative alignments for bar plot layout. From 0 (left/bottom-end) to 1 (right/top-end). Default is 0.5 (center). table : bool, Series or DataFrame, default False &nbsp;&nbsp;&nbsp;&nbsp;If True, draw a table using the data in the DataFrame and the data will be transposed to meet matplotlib's default layout. If a Series or DataFrame is passed, use passed data to draw a table. yerr : DataFrame, Series, array-like, dict and str &nbsp;&nbsp;&nbsp;&nbsp;See `Plotting with Error Bars <visualization.errorbars>` for detail. xerr : DataFrame, Series, array-like, dict and str &nbsp;&nbsp;&nbsp;&nbsp;Equivalent to yerr. stacked : bool, default False in line and bar plots, and True in area plot &nbsp;&nbsp;&nbsp;&nbsp;If True, create stacked plot. secondary\_y : bool or sequence, default False &nbsp;&nbsp;&nbsp;&nbsp;Whether to plot on the secondary y-axis if a list/tuple, which columns to plot on secondary y-axis. mark\_right : bool, default True &nbsp;&nbsp;&nbsp;&nbsp;When using a secondary\_y axis, automatically mark the column labels with "(right)" in the legend. include\_bool : bool, default is False &nbsp;&nbsp;&nbsp;&nbsp;If True, boolean values can be plotted. backend : str, default None &nbsp;&nbsp;&nbsp;&nbsp;Backend to use instead of the backend specified in the option `plotting.backend`. For instance, 'matplotlib'. Alternatively, to specify the `plotting.backend` for the whole session, set `pd.options.plotting.backend`. \*\*kwargs &nbsp;&nbsp;&nbsp;&nbsp;Options to pass to matplotlib plotting method. Returns ------- `matplotlib.axes.Axes` or numpy.ndarray of them &nbsp;&nbsp;&nbsp;&nbsp;If the backend is not the default matplotlib one, the return value will be the object returned by the backend. Notes ----- - See matplotlib documentation online for more on this subject - If `kind` = 'bar' or 'barh', you can specify relative alignments &nbsp;&nbsp;for bar plot layout by `position` keyword. From 0 (left/bottom-end) to 1 (right/top-end). Default is 0.5 (center) Examples -------- For Series: For DataFrame: For SeriesGroupBy: For DataFrameGroupBy:, hint
+
+
+
