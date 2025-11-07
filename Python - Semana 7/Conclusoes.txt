@@ -1,0 +1,14 @@
+# Conclusões
+
+As categorias que mais se destacaram em faturamento total nesse período foram os itens de "Informática"
+que podem ser identificadas no gráfico de barras do faturamento por categoria. Representando 44% das vendas, 
+entretanto é nessa categoria que encontramos os itens de maior valor.
+
+É comum notar que categorias com descontos mais elevados podem ter um faturamento maior em volume, 
+mas essa situação não ocorreu no período avaliado.
+
+Como o período avaliado (30 dias) é muito pequeno, no gráfico de evolução de faturamento por data, 
+não foi possível identificar dias de maior concentração de vendas. Temos um ponto fora da curva devido a venda de
+3 equipamentos de Notebook no dia 01.
+
+
