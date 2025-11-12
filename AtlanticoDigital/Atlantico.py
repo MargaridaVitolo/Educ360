@@ -33,16 +33,18 @@ def formata_brasileiro(numero):
 
 # --- 1. Função para Obter o Base64 da Imagem ---
 def img_to_base64(img_path):
-    """Lê um arquivo de imagem e retorna sua string codificada em Base64."""
-    try:
-        # Abre o arquivo em modo binário ('rb')
-        with open(img_path, "rb") as img_file:
-            # Codifica os dados binários para Base64
-            b64_string = base64.b64encode(img_file.read()).decode()
-        return b64_string
-    except FileNotFoundError:
-        st.error(f"Erro: Arquivo '{img_path}' não encontrado.")
+    """
+    Lê um arquivo de imagem e retorna sua string codificada em Base64.
+    Se o arquivo não existir, retorna None e exibe um aviso.
+    """
+    img_path = Path(img_path)
+    if not img_path.exists():
+        st.warning(f"⚠️ Imagem não encontrada: {img_path}")
         return None
+    
+    with open(img_path, "rb") as img_file:
+        b64_string = base64.b64encode(img_file.read()).decode()
+    return b64_string
 
 page_bg_img = '''
 <style>
@@ -221,20 +223,22 @@ gif_filename = Path(__file__).parent / "Atlantico.gif"
 # Converte o GIF e obtém a string Base64
 base64_gif = img_to_base64(gif_filename)
 
-if base64_gif:
-    # Cria o URI de dados no formato HTML: data:image/gif;base64,...
-    # O MIME type para GIF é image/gif
-    gif_uri = f"data:image/gif;base64,{base64_gif}"
-
 GIF_WIDTH = 50
 
-st.markdown(
+if base64_gif:
+    gif_uri = f"data:image/gif;base64,{base64_gif}"
+    st.markdown(
         f"""
         <div style='display: flex; align-items: center;'>
-            <img src='{gif_uri}' width='{GIF_WIDTH}' style='vertical-align: middle;'>
-            <h1 style='color:#0A4D8C; margin-right: 10px;'>&nbsp;&nbsp;Atlântico Digital</h1>
+            <img src='{gif_uri}' width='{GIF_WIDTH}' style='vertical-align: middle; margin-right: 10px;'>
+            <h1 style='color:#0A4D8C; margin: 0;'>Atlântico Digital</h1>
         </div>
-        """, 
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(
+        "<h1 style='color:#0A4D8C;'>Atlântico Digital</h1>",
         unsafe_allow_html=True
     )
 #-------------------------------------------------------------------
