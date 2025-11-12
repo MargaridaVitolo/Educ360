@@ -4,6 +4,8 @@ import plotly.express as px
 import streamlit as st
 import plotly.graph_objects as go
 
+#streamlit run "/Users/margarida/Documents/Curso Python/Educ360/repo/Educ360/Python - Semana 7/Semana 7 - Visualização.py"
+
 def card_com_borda(titulo, valor):
     st.markdown(
         f"""
@@ -24,6 +26,7 @@ def formata_brasileiro(numero):
     saida = saida.replace('.',',').replace('_','.')
     return saida
 
+
 page_bg_img = '''
 <style>
     .stApp {
@@ -36,12 +39,16 @@ st.markdown(page_bg_img, unsafe_allow_html=True)
 
 st.set_page_config(page_title="Dados Informática Ltda", layout="wide")
 
-#CSV
-df=pd.read_csv('/Users/margarida/Documents/Curso Python/Educ360/repo/Educ360/Python - Semana 7/vendas.csv',
-               parse_dates=['data_venda'])
+# --- Barra Lateral (Upload CSV e Filtros) ---
+st.sidebar.header("📂 Upload do arquivo .CSV")
+uploaded_file = st.sidebar.file_uploader("Escolha um arquivo .CSV", type=['csv'])
 
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file, parse_dates=['data_venda'])
+else:
+    st.sidebar.warning("Por favor, envie um arquivo CSV para análise.")
+    st.stop()
 
-# --- Barra Lateral (Filtros) ---
 st.sidebar.header("🔍 Filtros para Análise")
 
 # Calcular percentual de desconto
@@ -53,7 +60,13 @@ df['percentual_desconto'] = (df['desconto'] / df['valor_sem_desconto']).fillna(0
 # recebe todas as datas (df), classifica e filtra somente 1 de cada (unique)
 datas_unicas = sorted(df['data_venda'].dt.strftime("%d-%m-%Y").unique())
 #usando os recursos do st, crio uma barra lateral com as opções (selectbox) com a primeira opçao como Todas
-opcao_data = st.sidebar.selectbox("Selecione a data:",options=["Todas"] + datas_unicas)
+#opcao_data = st.sidebar.selectbox("Selecione a data:",options=["Todas"] + datas_unicas)
+data_inicial = st.sidebar.selectbox("Data Inicial", options=datas_unicas, index=0)
+data_final = st.sidebar.selectbox("Data Final", options=datas_unicas, index=len(datas_unicas)-1)
+
+# Converter de volta para datetime para filtro
+data_inicio_dt = pd.to_datetime(data_inicial, dayfirst=True)
+data_fim_dt = pd.to_datetime(data_final, dayfirst=True)
 
 #Combo de categorias
 
@@ -76,8 +89,13 @@ max_desconto = round(filtro_desconto[1],2)
 
 df_filtrado = df.copy()
 
-if opcao_data != "Todas":
-    df_filtrado = df_filtrado[df_filtrado["data_venda"].dt.strftime("%d-%m-%Y") == opcao_data]
+#if opcao_data != "Todas":
+#    df_filtrado = df_filtrado[df_filtrado["data_venda"].dt.strftime("%d-%m-%Y") == opcao_data]
+
+df_filtrado = df_filtrado[
+    (df_filtrado['data_venda'] >= pd.to_datetime(data_inicio_dt)) &
+    (df_filtrado['data_venda'] <= pd.to_datetime(data_fim_dt))
+    ]
 
 if opcao_categoria != "Todas":
     df_filtrado = df_filtrado[df_filtrado["categoria"] == opcao_categoria]
@@ -99,8 +117,8 @@ if total_vendas == 0:
     st.warning("⚠️ Não existem dados que atendam aos filtros selecionados.")
     st.stop()
 
-st.title(":blue[🎲 Dados Informática Ltda]")
-    
+st.title(":blue[🎲 Dados Informática Ltda]") 
+
 # Exibir os cards lado a lado
 card1, card2, card3 = st.columns(3)
 with card1:
@@ -242,7 +260,11 @@ l2_col2.plotly_chart(fig4, use_container_width=True)
 
 # Visão das vendas
 
-st.subheader(f":blue[💰 Vendas Data: {opcao_data} - Categoria: {opcao_categoria} - Faixa Desconto de {min_desconto}% até {max_desconto}%]")
+#st.subheader(f":blue[💰 Vendas Data: {data_inicio_dt.strftime('%d/%m/%Y')} até {data_fim_dt.strftime('%d/%m/%Y')} - Categoria: {opcao_categoria} - Faixa Desconto de {min_desconto}% até {max_desconto}%]")
+st.markdown(
+    f'<p style="color:#0A4D8C; font-size:22px;">💰 Vendas Data: {data_inicio_dt.strftime("%d/%m/%Y")} até {data_fim_dt.strftime("%d/%m/%Y")}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Categoria: {opcao_categoria} - Faixa Desconto de {min_desconto}% até {max_desconto}%</p>',
+    unsafe_allow_html=True
+)
 
 # Formatar o valor para apresentar virgula no lugar do ponto
 df_filtrado['preco_unitario_form'] = df_filtrado['preco_unitario'].apply(formata_brasileiro) 
