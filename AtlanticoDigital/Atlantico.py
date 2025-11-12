@@ -51,6 +51,10 @@ page_bg_img = '''
     }
 </style>
 '''
+
+# Define o caminho do GIF relativo ao arquivo atual
+gif_filename = Path(__file__).parent / "Atlantico.gif"
+
 #-------------------------------------------------------------------
 
 st.markdown(page_bg_img, unsafe_allow_html=True)    
