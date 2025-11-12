@@ -52,9 +52,6 @@ page_bg_img = '''
 </style>
 '''
 
-# Define o caminho do GIF relativo ao arquivo atual
-gif_filename = Path(__file__).parent / "Atlantico.gif"
-
 #-------------------------------------------------------------------
 
 st.markdown(page_bg_img, unsafe_allow_html=True)    
@@ -218,8 +215,8 @@ df_filtrado = df_filtrado[
 # principal
 #-------------------------------------------------------------------
 
-# Nome do seu arquivo GIF (deve estar na mesma pasta do script)
-gif_filename = '/Users/margarida/Documents/Curso Python/Educ360/repo/Educ360/AtlanticoDigital/Atlantico.gif'
+# Define o caminho do GIF relativo ao arquivo atual
+gif_filename = Path(__file__).parent / "Atlantico.gif"
 
 # Converte o GIF e obtém a string Base64
 base64_gif = img_to_base64(gif_filename)
