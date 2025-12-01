@@ -4,10 +4,12 @@ import plotly.express as px
 import streamlit as st
 import plotly.graph_objects as go
 import base64
-from pathlib import Path 
-from thefuzz import process, fuzz
 import io
 import os
+from pathlib import Path 
+from thefuzz import process, fuzz
+from datetime import datetime
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
 
 #streamlit run "/Users/margarida/Documents/Curso Python/Educ360/repo/Educ360/AtlanticoDigital/Atlantico.py"
@@ -48,9 +50,20 @@ def img_to_base64(img_path):
     return b64_string
 
 def decimal_para_hora_min(decimal_horas):
-    horas = int(decimal_horas)  # parte inteira = horas
-    minutos = int(round((decimal_horas - horas) * 60))  # parte decimal convertida em minutos arredondados
+    #horas = int(decimal_horas)  # parte inteira = horas
+    #minutos = int(round((decimal_horas - horas) * 60))  # parte decimal convertida em minutos arredondados
+    if pd.isna(decimal_horas) or decimal_horas is None:
+        return '00:00'
+    
+    # Total de minutos
+    total_minutos = int(round(decimal_horas * 60))
+    
+    # Extrair horas e minutos
+    horas = total_minutos // 60
+    minutos = total_minutos % 60
+    
     return f"{horas:02d}:{minutos:02d}"
+
 
 def explode_dados(df):
     df = df.copy()
@@ -90,10 +103,10 @@ if uploaded_file is not None:
 
     try:
         if file_ext == '.csv':
-            df = pd.read_csv(uploaded_file,sep=';')
+            df = pd.read_csv(uploaded_file,sep=';',usecols=(0,1,2,3,6,7,9,10,15,16,18,19,21,23,25,26))
             st.sidebar.success("Arquivo CSV carregado com sucesso!")
         elif file_ext in ['.xls', '.xlsx']:
-            df = pd.read_excel(uploaded_file)
+            df = pd.read_excel(uploaded_file,usecols=(0,1,2,3,6,7,9,10,15,16,18,19,21,23,25,26))
             st.sidebar.success("Arquivo Excel carregado com sucesso!")
         else:
             st.sidebar.error("Tipo de arquivo não suportado.")
@@ -118,32 +131,18 @@ novos_nomes = [
 'cliente',
 'grupo',
 'projeto',
-'id_tarefa_princ',
-'titulo_tarefa_princ',
 'tipo_tarefa',
 'equipe',
-'cc',
 'para',
 'id_tarefa',
-'tarefa',
-'urgente',
-'prioridade',
-'usu_abertura',
 'dt_abertura',
 'dt_entrega_desejada',
-'dt_entrega_estimada',
 'dt_fechada',
 'esforco_estimado',
-'esforco_estimado_primeiro',
 'esforco_registrado',
-'esforco_registrado_sub',
 'percentual_realizado',
-'etapa',
 'fase',
-'st_reaberta',
-'tags',
-'codigo_cliente',
-'horas_restantes'
+'st_reaberta'
 ]
 
 df.columns = novos_nomes
@@ -228,6 +227,12 @@ projetos_corrigida = sorted(set(projetos_corrigida))
 clientes = sorted(df['cliente'].unique())
 
 #-------------------------------------------------------------------
+#Combo de tarefas
+#-------------------------------------------------------------------
+
+tarefas = sorted(df['tipo_tarefa'].unique())
+
+#-------------------------------------------------------------------
 # APRESENTA OPÇÃO PARA O USUÁRIO FILTRAR OS DADOS
 #-------------------------------------------------------------------
 
@@ -239,10 +244,11 @@ st.sidebar.header("🔍 Filtros para Análise")
 filtrar_dados = st.sidebar.checkbox("Deseja filtrar os dados dos relatórios?")
 
 if filtrar_dados:
-    opcao_quadros = st.sidebar.selectbox("Selecione um Quadro:", options=["Todos"] + quadros)
-    opcao_grupos = st.sidebar.selectbox("Selecione um Grupo:", options=["Todos"] + grupos)
-    opcao_projetos = st.sidebar.selectbox("Selecione um Projeto:", options=["Todos"] + projetos_corrigida)
-    opcao_clientes = st.sidebar.selectbox("Selecione um Cliente:", options=["Todos"] + clientes)
+    opcao_quadros    = st.sidebar.selectbox("Selecione um Quadro:",  options=["Todos"] + quadros)
+    opcao_grupos     = st.sidebar.selectbox("Selecione um Grupo:",   options=["Todos"] + grupos)
+    opcao_projetos   = st.sidebar.selectbox("Selecione um Projeto:", options=["Todos"] + projetos_corrigida)
+    opcao_clientes   = st.sidebar.selectbox("Selecione um Cliente:", options=["Todos"] + clientes)
+    opcao_tarefas    = st.sidebar.selectbox("Selecione uma Tarefa:", options=["Todas"] + tarefas)
     mostrar_fechadas = st.sidebar.checkbox("Mostrar somente tarefas encerradas?")
 
     # Aplicar os filtros no DataFrame depois, conforme as escolhas do usuário
@@ -253,39 +259,26 @@ if filtrar_dados:
     if opcao_projetos != "Todos":
         df_filtrado = df_filtrado[df_filtrado['projeto'] == opcao_projetos]
     if opcao_clientes != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['cliente'] == opcao_clientes]        
+        df_filtrado = df_filtrado[df_filtrado['cliente'] == opcao_clientes]
+    if opcao_tarefas != "Todas":
+        df_filtrado = df_filtrado[df_filtrado['tipo_tarefa'] == opcao_tarefas]   
     if mostrar_fechadas:
         df_filtrado = df_filtrado[df_filtrado['dt_fechada'].notna()]
 else:
     st.sidebar.info("Nenhum filtro aplicado nos relatórios.")
 
 #-------------------------------------------------------------------
-# MOSTRAR OPCAO PARA REDUZIR O NÚMERO DE INFORMAÇOES APRESENTADAS
-#-------------------------------------------------------------------
-
-# --- Top N resultados ---
-st.sidebar.header("✂️ Configurações de Exibição")
-
-top_n = st.sidebar.number_input(
-    "Número de registros a exibir nos gráficos (Top N):",
-    min_value=3,
-    max_value=50,
-    value=10,
-    step=1,
-    help="Define quantos registros serão mostrados nos gráficos (ex: Top 10 tarefas, pessoas, etc.)"
-)    
-
-#-------------------------------------------------------------------
 # MOSTRAR O FILTRO DE DATAS, CASO TENHA SELECIONADO A OPÇÃO ANTERIOR
 #-------------------------------------------------------------------
 
 if filtrar_dados and mostrar_fechadas:
+
     # Garante que a coluna de datas está no formato datetime
     df_filtrado['dt_fechada'] = pd.to_datetime(df_filtrado['dt_fechada'], errors='coerce')
 
     # Define data mínima e máxima automaticamente
     data_min = df_filtrado['dt_fechada'].min().date()
-    data_max = df_filtrado['dt_fechada'].max().date()
+    data_max = df_filtrado['dt_fechada'].max().date()    
 
     # --- Seletor de data inicial ---
     data_inicial = st.sidebar.date_input(
@@ -313,6 +306,23 @@ if filtrar_dados and mostrar_fechadas:
         (df_filtrado['dt_fechada'].dt.date >= data_inicial) &
         (df_filtrado['dt_fechada'].dt.date <= data_final)
     ]           
+
+#-------------------------------------------------------------------
+# MOSTRAR OPCAO PARA REDUZIR O NÚMERO DE INFORMAÇOES APRESENTADAS
+#-------------------------------------------------------------------
+
+# --- Top N resultados ---
+st.sidebar.header("✂️ Configurações de Exibição")
+
+top_n = st.sidebar.number_input(
+    "Número de ocorrências que serão exibidas nos gráficos (Top N):",
+    min_value=3,
+    max_value=50,
+    value=10,
+    step=1,
+    help="Define quantas ocorrências serão mostrados nos gráficos (ex: Top 10 tarefas, pessoas, etc.)"
+)    
+
 
 #-------------------------------------------------------------------
 # LOGO
@@ -382,11 +392,29 @@ if total_tarefas == 0:
 # Exibir os cards lado a lado
 card1, card2, card3 = st.columns(3)
 with card1:
-    card_com_borda("Total Tarefas", total_tarefas)
+    card_com_borda("Total Ocorrências", total_tarefas)
 with card2:
     card_com_borda("Encerradas no Período", total_encerradas)
 with card3:
     card_com_borda("SLA Médio (hh:mm)", media_horas)
+
+#verifica qual a data minima e máxima do dataframe filtrado
+data_min = df_filtrado['dt_fechada'].min().date()
+data_max = df_filtrado['dt_fechada'].max().date()    
+
+data_min_str = data_min.strftime('%d/%m/%Y') if hasattr(data_min, 'strftime') else str(data_min)
+data_max_str = data_max.strftime('%d/%m/%Y') if hasattr(data_max, 'strftime') else str(data_max)
+
+periodo_texto = f"Fechadas entre: {data_min_str} e {data_max_str}"
+
+st.markdown(
+    f"""
+    <div style="color: #0A4D8C; font-size: 1.3em; margin-top: 12px;">
+        {periodo_texto}
+    </div>
+    """, 
+    unsafe_allow_html=True
+)  
 
 st.markdown("---")
 
@@ -409,7 +437,7 @@ if selecoes.get("Tarefas Reabertas"):
         df_reabertas,
         names='Status',
         values='Quantidade',
-        title='Percentual de Tarefas Reabertas <br> (por equipe)',
+        title='Percentual de Tarefas Reabertas <br> (Distribuído por equipes)',
         color='Status',
         color_discrete_sequence = px.colors.qualitative.Pastel,
         hole=0.3,  # Faz o gráfico ser tipo donut (opcional)
@@ -443,17 +471,23 @@ if selecoes.get("Tarefas Reabertas"):
     # Card1 com total de Tarefas Reabertas
     tarefas_reabertas = df_reabertas_sim['id_tarefa'].count()
     with card1:
-        card_com_borda("📦 Tarefas Reabertas <br> <br> (por equipe)", tarefas_reabertas)
+        card_com_borda("📦 Tarefas Reabertas <br> <br> (Distribuído por equipes)", tarefas_reabertas)
 
     with coluna_titulo:   
         st.plotly_chart(fig1, use_container_width=True)
 
-    st.markdown("---")     
+    st.markdown("---")    
+
+    # Converter todas as colunas numéricas candidatas
+    colunas_numericas = ['esforco_estimado', 'id_tarefa']  
+    for col in colunas_numericas:
+        if col in df_reabertas_sim.columns:
+            df_reabertas_sim[col] = pd.to_numeric(df_reabertas_sim[col], errors='coerce')
 
     df_analise = df_reabertas_sim.groupby('equipe_resp').agg(
         total_reabertas=('id_tarefa', 'count'),
         media_esforco=('esforco_estimado', 'mean')
-    ).reset_index()
+    ).reset_index() 
 
     #Remove linhas com 'media_esforco' nula ou NaN
     df_analise = df_analise.dropna(subset=['media_esforco'])
@@ -471,6 +505,9 @@ if selecoes.get("Tarefas Reabertas"):
         y=df_analise['total_reabertas'],
         name='Tarefas Reabertas',
         marker_color='#5B84B1', 
+        text=df_analise['total_reabertas'].astype(str),  # Texto a ser exibido
+        textposition='outside',  # Posição: acima das barras
+        textfont=dict(size=12, color='#0A4D8C'),  # Formatação do texto        
         hovertemplate="Equipe: %{x}<br>Tarefas Reabertas: %{y}<extra></extra>"
     ))
 
@@ -479,10 +516,13 @@ if selecoes.get("Tarefas Reabertas"):
         x=df_analise['equipe_resp'],
         y=df_analise['media_esforco'],
         name='Tempo Médio Resolução (Horas)',
-        mode='lines+markers',
-        marker=dict(color='#FC766A', size=10), 
+        mode='lines+markers+text',
+        marker=dict(color='#FC766A', size=10),
         line=dict(color='#FC766A', width=3),
         yaxis='y2', # Atribui ao eixo Y secundário
+        text=df_analise['media_esforco_formatada'],  # ✅ Texto formatado (hh:mm)
+        textposition='bottom center',  # ✅ Abaixo do marker
+        textfont=dict(size=11, color='#FC766A'),  # Formatação do texto
         customdata=df_analise['media_esforco_formatada'], 
         hovertemplate="Equipe: %{x}<br>Tempo Médio: %{customdata}<extra></extra>" 
     ))
@@ -502,8 +542,8 @@ if selecoes.get("Tarefas Reabertas"):
 
     fig2.update_layout(
         title=dict(
-            text=f'Tarefas Reabertas vs. Tempo Médio (por Equipe) <br>' 
-                 f'<span style="font-size:16px;">(Somente as {top_n} primeiras)</span>',
+            text=f'Tarefas Reabertas vs. Tempo Médio (Distribuído por Equipes) <br>' 
+                 f'<span style="font-size:16px;">(Top {top_n} de Tarefas Reabertas  )</span>',
             x=0.5,
             xanchor='center',
             font=dict(size=20, color='#0A4D8C', family="Calibri")
@@ -512,7 +552,8 @@ if selecoes.get("Tarefas Reabertas"):
         xaxis=dict(
             title='Equipe',
             tickangle=-45, 
-            automargin=True
+            automargin=True,
+            showgrid=True
         ),
         # Eixo Y Primário (Barras - Tarefas Reabertas)
         yaxis=dict(
@@ -547,9 +588,9 @@ if selecoes.get("Tarefas Reabertas"):
     st.plotly_chart(fig2, use_container_width=True)
 
     # Apresentação dos dados em lista
-    st.markdown("### Tarefas por time responsável")
+    st.markdown("### Tarefas por Time Responsável")
 
-    time = st.selectbox("Filtrar por time responsável:", ["(Todos)"] + sorted(
+    time = st.selectbox("Filtrar por Time Responsável:", ["(Todos)"] + sorted(
         df_reabertas_sim['equipe_resp']
         .fillna("")
         .astype(str)
@@ -559,25 +600,23 @@ if selecoes.get("Tarefas Reabertas"):
 
     df_view = df_reabertas_sim if time == "(Todos)" else df_reabertas_sim[df_reabertas_sim['equipe_resp'] == time]
 
-    esforco_formatado = df_view['esforco_registrado'].apply(decimal_para_hora_min)
+    df_view['esforco_registrado'] = df_view['esforco_registrado'].apply(decimal_para_hora_min)
 
     coluna_formatada = {
     'tipo_tarefa': st.column_config.TextColumn("Tarefa"),
     'equipe_resp': st.column_config.TextColumn("Equipe Responsável"),
     'para': st.column_config.TextColumn("Responsável"),
-    'dt_abertura': st.column_config.DateColumn("Data Abertura", format='DD/MM/YYYY'),
+    'dt_fechada': st.column_config.DateColumn("Fechada em:", format='DD/MM/YYYY'),
     'esforco_registrado': st.column_config.TextColumn("Esforço (hh:mm)")
     }
 
     st.dataframe(
         df_view[
-            ["tipo_tarefa", "equipe_resp", "para", "dt_abertura", "esforco_registrado"]
+            ["tipo_tarefa", "equipe_resp", "para", "dt_fechada", "esforco_registrado"]
         ].sort_values("equipe_resp", ascending=False),column_config=coluna_formatada,
         use_container_width=True,
         hide_index=True
     )
-
-    pass
 
 # ===================================================================
 # 📊 Grafico 2 - Tempo entre entrega desejada x entrega fechada
@@ -589,13 +628,117 @@ if selecoes.get("SLA"):
                Utilize os filtros à esquerda para refinar sua análise.'''
     st.markdown(multi)
 
+    #-----
+    # GERAÇÃO DO GRÁFICO (Esforço Estimado vs. Esforço Registrado) - Agrupado por Tipo de Tarefa
+
+    # Agrupar os dados por 'tipo_tarefa' para somar o esforço
+    df_esforco_tipo = round(df_filtrado.groupby('tipo_tarefa').agg(
+        esforco_estimado_medio=('esforco_estimado', 'mean'),
+        esforco_registrado_medio=('esforco_registrado', 'mean')
+    ).reset_index(),2)
+
+    df_esforco_tipo['esforco_estimado_medio_format'] = df_esforco_tipo['esforco_estimado_medio'].apply(decimal_para_hora_min)
+    df_esforco_tipo['esforco_registrado_medio_format'] = df_esforco_tipo['esforco_registrado_medio'].apply(decimal_para_hora_min)
+
+    # Ordena para melhor visualização (por média estimada decrescente) e filtra o nr de retorno top n
+    df_esforco_tipo = df_esforco_tipo.sort_values(by=['esforco_estimado_medio'], ascending=False).head(top_n)  
+
+    # Determinar o valor máximo para a escala uniforme
+    max_valor_horas = df_esforco_tipo[['esforco_estimado_medio', 'esforco_registrado_medio']].max().max()
+    # Adicionamos uma pequena margem (ex: 5%) para que a barra mais alta não toque o topo do gráfico
+    limite_superior = max_valor_horas * 1.05 
+    y_range = [0, limite_superior] # Define a escala de 0 até o limite_superior
+
+    fig1 = go.Figure()
+
+    # Esforço Estimado - Eixo Y Primário
+    fig1.add_trace(
+        go.Bar(
+            x=df_esforco_tipo['tipo_tarefa'], 
+            y=df_esforco_tipo['esforco_estimado_medio'],
+            name='Esforço Estimado (Horas)',
+            marker_color='darkblue',
+            text=df_esforco_tipo['esforco_estimado_medio_format'],  # Texto a ser exibido
+            textposition='outside',  # Posição: acima das barras
+            textfont=dict(size=12, color='#0A4D8C'),  # Formatação do texto        
+            hovertemplate="Tarefa: %{x}<br>Esforço estimado médio: %{y}<extra></extra>"
+        )
+    )
+
+    # Linha  - Esforço Registrado - Eixo Y Secundário
+    fig1.add_trace(
+        go.Scatter(
+            x=df_esforco_tipo['tipo_tarefa'], 
+            y=df_esforco_tipo['esforco_registrado_medio'],
+            name='Esforço Registrado (Horas)',
+            mode='lines+markers+text',
+            marker=dict(size=8, symbol='circle'),
+            line=dict(color='#FC766A', width=3),
+            yaxis='y2', # Atribui ao eixo Y secundário
+            text=df_esforco_tipo['esforco_registrado_medio_format'],  #Texto formatado (hh:mm)
+            textposition='top center', 
+            textfont=dict(size=11, color='#FC766A'),  # Formatação do texto
+            customdata=df_esforco_tipo['esforco_registrado_medio_format'], 
+            hovertemplate="Tarefa: %{x}<br>Esforço Médio Registrado: %{customdata}<extra></extra>"             
+        )
+    )
+
+    fig1.update_layout(
+        title=dict(
+            text=f'Esforço Estimado vs. Esforço Registrado por Tipo de Tarefa <br>' 
+                 f'<span style="font-size:16px;">(Top {top_n} de Esforço Estimado  )<br></span>',
+            x=0.5,
+            xanchor='center',
+            font=dict(size=20, color='#0A4D8C', family="Calibri")
+        ),
+        # Eixo X (Tipo de Tarefa)
+        xaxis=dict(
+            title='Tipo de Tarefa',
+            tickangle=-45, 
+            automargin=True,
+            showgrid=True
+        ),
+        # Configuração do Eixo Y Primário (para as Barras - Média do tempo estimado)
+        yaxis=dict(
+            title='Esforço Estimado (hh:mm)',
+            showgrid=True,
+            range=y_range
+        ),
+        
+        # Configuração do Eixo Y Secundário (para a Linha - Média do tempo registrada)
+        yaxis2=dict(
+            title='Esforço Registrado (hh:mm)',
+            overlaying='y',  # Coloca este eixo sobre o primário
+            side='right',    # Move o eixo para o lado direito
+            showgrid=True,
+            range=y_range
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1.2
+        ),
+        barmode='group',
+        template='plotly_white',
+        height=600 
+    )
+
+    st.plotly_chart(fig1, use_container_width=True)    
+
+    #-----
+    # GERAÇÃO DO GRÁFICO (Tempo médio entre a data de entrega desejada e data de entrega fechada) - Agrupado por Tipo de Tarefa
+
     # Desconsiderar linhas onde dt_entrega_desejada estiver vazia
     df_sla = df_filtrado[df_filtrado['dt_entrega_desejada'].notna()]
 
     df_sla['dt_entrega_desejada'] = pd.to_datetime(df_sla['dt_entrega_desejada'], errors='coerce')
     df_sla['dt_fechada'] = pd.to_datetime(df_sla['dt_fechada'], errors='coerce')
 
-    df_sla['diferenca_horas'] = (df_sla['dt_entrega_desejada'] - df_sla['dt_fechada']).dt.total_seconds() / 3600
+    df_sla['diferenca_horas'] = df_sla['dt_fechada'] - df_sla['dt_entrega_desejada']
+    
+    df_sla['diferenca_horas'] = df_sla['diferenca_horas'].dt.total_seconds() / 3600    
 
     # Desconsiderar outliers
     # Calcula o primeiro quartil (Q1) e o terceiro quartil (Q3) da 'diferenca_horas'
@@ -613,24 +756,24 @@ if selecoes.get("SLA"):
     df_sla_sem_outliers = df_sla[(df_sla['diferenca_horas'] >= lower_bound) & (df_sla['diferenca_horas'] <= upper_bound)]
 
     # Calcula a média da diferença de horas por tipo de tarefa usando os dados sem outliers
-    df_sla_por_tarefa_sem_outliers = df_sla_sem_outliers.groupby('tipo_tarefa')['diferenca_horas'].mean().reset_index()
+    df_sla_por_tarefa_sem_outliers = round(df_sla_sem_outliers.groupby('tipo_tarefa')['diferenca_horas'].mean().reset_index(),2)
 
     # Ordena os tipos de tarefa pelo tempo médio de SLA para melhor visualização
     df_sla_por_tarefa_sem_outliers = df_sla_por_tarefa_sem_outliers.sort_values('diferenca_horas', ascending=True)
 
     # Cria o gráfico de barras horizontal
-    fig1 = px.bar(df_sla_por_tarefa_sem_outliers,
+    fig2 = px.bar(df_sla_por_tarefa_sem_outliers,
                 x='diferenca_horas',
                 y='tipo_tarefa',
                 orientation='h',
                 color='diferenca_horas', # Colore com base na diferença de horas
                 color_continuous_scale='RdYlGn', # Escala de cores Vermelho-Amarelo-Verde
                 labels={'diferenca_horas': 'Média da Diferença de Horas (SLA)', 'tipo_tarefa': 'Tipo de Tarefa'},
-                title='Tempo Médio (SLA) entre Entrega Desejada e Fechada por Tipo de Tarefa (Sem Outliers)',
+                title='Tempo Médio em horas (SLA) entre a Data Entrega Desejada e a Data Fechada por Tipo de Tarefa (Sem Outliers)',
                 height=900) 
 
     # Ajusta o layout para melhor legibilidade
-    fig1.update_layout(
+    fig2.update_layout(
         title_font_size=20,
         xaxis_title_font_size=14,
         yaxis_title_font_size=14,
@@ -639,10 +782,14 @@ if selecoes.get("SLA"):
         yaxis_categoryorder='total ascending' # Garante a ordem das barras
     )
 
-    st.plotly_chart(fig1, use_container_width=True)
+    st.plotly_chart(fig2, use_container_width=True)
+
+    #-----
+    # Apresentaçao dos dados que não foram apresentados no gráfico
 
     # Apresentação dos dados em lista
     st.markdown("### Tarefas que não foram consideradas no gráfico acima")
+    st.markdown('##### Ocorrências sem data de entrega e Diferença(h) fora da média do intervalo 25% a 75%')
 
     # Filtra o DataFrame (df_filtered) para encontrar linhas onde 'diferenca_horas' é um outlier
     df_outliers_dif = df_sla[(df_sla['diferenca_horas'] < lower_bound) | (df_sla['diferenca_horas'] > upper_bound)]
@@ -653,7 +800,20 @@ if selecoes.get("SLA"):
     # Combina os dois conjuntos de outliers e remove duplicatas (caso uma linha se enquadre em ambas as categorias)
     df_outliers = pd.concat([df_outliers_dif, df_outliers_estimada_nula]).drop_duplicates()
 
+    # Total de ocorrências excluídas
+    total_ocorrencias = df_outliers['cliente'].count()
+
+    # Validação: caso não existam dados filtrados
+    if total_ocorrencias == 0:
+        st.warning("⚠️ Não existem ocorrências desconsideradas.")
+        st.stop()
+
     # Calcula o SLA destas tarefas
+    # Converter ambas as colunas para datetime
+    df_outliers['dt_fechada'] = pd.to_datetime(df_outliers['dt_fechada'], errors='coerce')
+    df_sla['dt_entrega_desejada'] = pd.to_datetime(df_sla['dt_entrega_desejada'], errors='coerce')
+
+    # Calcular diferença em horas
     df_outliers['diferenca_horas'] = (df_outliers['dt_fechada'] - df_sla['dt_entrega_desejada']).dt.total_seconds() / 3600
 
     coluna_formatada = {
@@ -672,8 +832,7 @@ if selecoes.get("SLA"):
         ].sort_values("dt_entrega_desejada", ascending=False),column_config=coluna_formatada,
         use_container_width=True,
         hide_index=True
-    )    
-    pass
+    ) 
 
 # ===================================================================
 # 📊 Grafico 3 - Média de horas para fechamento por tipo de tarefa
@@ -695,9 +854,6 @@ if selecoes.get("Tempo médio por Tarefas"):
     # Média de horas por tipo
     media_horas = df_tmd.groupby('tipo_tarefa')['esforco_registrado'].mean().reset_index()
     media_horas = media_horas.round(2)
-
-    # Formata para hh:mm
-    # Usa media_formatada para texto/tooltip, e media_horas decimal para eixo y
     media_horas['media_formatada'] = media_horas['esforco_registrado'].apply(decimal_para_hora_min)
 
     # Combinar as métricas em um único DataFrame
@@ -727,7 +883,7 @@ if selecoes.get("Tempo médio por Tarefas"):
         mode='lines+markers+text',
         text=df_grafico['media_formatada'],
         textfont=dict(color='black'),
-        textposition='top center',
+        textposition='bottom center',
         marker=dict(color='orange', size=10),
         yaxis='y2'
     ))
@@ -735,9 +891,12 @@ if selecoes.get("Tempo médio por Tarefas"):
     # --- Layout ---
     fig1.update_layout(
         title=dict(
-            text=f'Total de Tarefas e SLA Médio de Encerramento <br>' 
-                f'<span style="font-size:16px;">(Somente as {top_n} primeiras tarefas mais executadas)</span>'),
-        title_x=0.5,
+            text=f'Total de Tarefas e SLA Médio de Encerramento (Esforço registrado) <br>' 
+                f'<span style="font-size:16px;">(Somente os {top_n} tipos de tarefa mais executadas)</span>',
+            x=0.5,
+            xanchor='center',
+            font=dict(size=20, color='#0A4D8C', family="Calibri")
+        ),
         xaxis_title='Tipo de Tarefa',
         yaxis=dict(
             title='Total de Tarefas',
@@ -754,28 +913,54 @@ if selecoes.get("Tempo médio por Tarefas"):
         legend=dict(x=0.9, y=1.0),
         barmode='group',
         template='plotly_white',
-        #width=1200,
         height=600
     )
 
-    fig1.update_layout(
-        title=dict(
-            #text='',
-            #x=0.5, 
-            xanchor='center',
-            font=dict(
-                size=20,
-                color='#0A4D8C',
-                family="Calibri"
-            )
-        )
-    )
     st.plotly_chart(
         fig1,
         config={"responsive": True},  # substitui use_container_width
     )
 
-    pass
+    # Apresentação dos dados em lista
+    st.markdown("### Detalhamento Tarefas")
+
+    df_summary = df_filtrado.groupby('tipo_tarefa', as_index=False).agg(
+        total_tarefa=('id_tarefa', 'count'),
+        media_esforco=('esforco_registrado','mean')).reset_index()
+
+    df_summary['media_formatada'] = df_summary['media_esforco'].apply(decimal_para_hora_min)
+
+    df_detalhe = df_filtrado.copy()
+    df_detalhe['esforco_formatado'] = df_detalhe['esforco_registrado'].apply(decimal_para_hora_min)
+
+    colunas_para_exibir = [
+        "cliente", 
+        "para", 
+        "id_tarefa", 
+        "esforco_formatado"
+    ]
+
+    config_colunas = {
+        "cliente": st.column_config.TextColumn("Cliente"),
+        "para": st.column_config.TextColumn("Responsável"),
+        "id_tarefa": st.column_config.TextColumn("Nr Tarefa"),
+        "esforco_formatado": st.column_config.TextColumn("Esforço Registrado (hh:mm)")
+    }
+
+    for _, row in df_summary.iterrows():
+        df_detalhe_filtrado = df_detalhe[df_detalhe["tipo_tarefa"] == row["tipo_tarefa"]]
+        with st.expander(f"**{row['tipo_tarefa']}** | Quantidade Tarefas: {row['total_tarefa']} | Esforço Médio: {row['media_formatada']}"):
+             st.dataframe(
+                 df_detalhe_filtrado[colunas_para_exibir],  
+                 column_config=config_colunas,     
+                 use_container_width=True,
+                 hide_index=True
+             )
+
+
+# ===================================================================
+# 📊 Grafico 4 - Média de horas para fechamento por cliente
+# ===================================================================
 
 if selecoes.get("Tempo médio por Clientes"):
 
@@ -822,7 +1007,7 @@ if selecoes.get("Tempo médio por Clientes"):
         mode='lines+markers+text',
         text=df_grafico_cliente['media_formatada'],
         textfont=dict(color='black'),
-        textposition='top center',
+        textposition='bottom center',
         marker=dict(color='orange', size=10),
         yaxis='y2'
     ))
@@ -830,8 +1015,8 @@ if selecoes.get("Tempo médio por Clientes"):
     # Configurações do layout do gráfico
     fig_cliente.update_layout(
         title=dict(
-            text=f'Total de Tarefas e Média de Esforço por Cliente <br>'
-                 f'<span style="font-size:16px;">(Somente os {top_n} principais clientes)</span>',
+            text=f'Total de Tarefas e SLA Médio de Encerramento (Esforço registrado) <br>'
+                 f'<span style="font-size:16px;">(Somente os {top_n} clientes com maior número de tarefas solicitadas)</span>',
             x=0.5,
             xanchor='center',
             font=dict(size=20, color='#0A4D8C', family="Calibri")
@@ -852,13 +1037,45 @@ if selecoes.get("Tempo médio por Clientes"):
         legend=dict(x=0.9, y=1.0),
         barmode='group',
         template='plotly_white',
-        height=600
+        height=700
     )
 
     st.plotly_chart(fig_cliente, config={"responsive": True})
 
-    pass
+    # Apresentação dos dados em lista
+    st.markdown("### Detalhamento Tarefas x Clientes")
 
+    df_summary = df_filtrado.groupby('cliente', as_index=False).agg(
+        total_tarefa=('id_tarefa', 'count'),
+        media_esforco=('esforco_registrado','mean')).reset_index()
 
-  
+    df_summary['media_formatada'] = df_summary['media_esforco'].apply(decimal_para_hora_min)
 
+    df_detalhe = df_filtrado.copy()
+    df_detalhe['esforco_formatado'] = df_detalhe['esforco_registrado'].apply(decimal_para_hora_min)
+    
+    colunas_para_exibir = [
+        "tipo_tarefa", 
+        "equipe",
+        "para", 
+        "id_tarefa", 
+        "esforco_formatado"
+    ]
+
+    config_colunas = {
+        "tipo_tarefa": st.column_config.TextColumn("Tarefa"),
+        'equipe': st.column_config.TextColumn("Equipe Responsável"),
+        "para": st.column_config.TextColumn("Responsável"),
+        "id_tarefa": st.column_config.TextColumn("Nr Tarefa"),
+        "esforco_formatado": st.column_config.TextColumn("Esforço Registrado (hh:mm)")
+    }
+
+    for _, row in df_summary.iterrows():
+        df_detalhe_filtrado = df_detalhe[df_detalhe["cliente"] == row["cliente"]]
+        with st.expander(f"**{row['cliente']}** | Quantidade Tarefas: {row['total_tarefa']} | Esforço Médio: {row['media_formatada']}"):
+             st.dataframe(
+                 df_detalhe_filtrado[colunas_para_exibir],  
+                 column_config=config_colunas,     
+                 use_container_width=True,
+                 hide_index=True
+             )

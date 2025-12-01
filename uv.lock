@@ -348,6 +348,7 @@ dependencies = [
     { name = "plotly" },
     { name = "requests" },
     { name = "streamlit" },
+    { name = "streamlit-aggrid" },
     { name = "thefuzz" },
 ]
 
@@ -362,6 +363,7 @@ requires-dist = [
     { name = "plotly", specifier = ">=6.3.1" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "streamlit", specifier = ">=1.50.0" },
+    { name = "streamlit-aggrid", specifier = ">=1.2.1" },
     { name = "thefuzz", extras = ["speedup"], specifier = ">=0.22.1" },
 ]
 
@@ -1211,6 +1213,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-decouple"
+version = "3.8"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e1/97/373dcd5844ec0ea5893e13c39a2c67e7537987ad8de3842fe078db4582fa/python-decouple-3.8.tar.gz", hash = "sha256:ba6e2657d4f376ecc46f77a3a615e058d93ba5e465c01bbe57289bfb7cce680f", size = 9612, upload-time = "2023-03-01T19:38:38.143Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/d4/9193206c4563ec771faf2ccf54815ca7918529fe81f6adb22ee6d0e06622/python_decouple-3.8-py3-none-any.whl", hash = "sha256:d0d45340815b25f4de59c974b855bb38d03151d81b037d9e3f463b0c9f8cbd66", size = 9947, upload-time = "2023-03-01T19:38:36.015Z" },
+]
+
+[[package]]
 name = "pytz"
 version = "2025.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1519,6 +1530,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d6/f6/f7d3a0146577c1918439d3163707040f7111a7d2e7e2c73fa7adeb169c06/streamlit-1.50.0.tar.gz", hash = "sha256:87221d568aac585274a05ef18a378b03df332b93e08103fffcf3cd84d852af46", size = 9664808, upload-time = "2025-09-23T19:24:00.31Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/38/991bbf9fa3ed3d9c8e69265fc449bdaade8131c7f0f750dbd388c3c477dc/streamlit-1.50.0-py3-none-any.whl", hash = "sha256:9403b8f94c0a89f80cf679c2fcc803d9a6951e0fba542e7611995de3f67b4bb3", size = 10068477, upload-time = "2025-09-23T19:23:57.245Z" },
+]
+
+[[package]]
+name = "streamlit-aggrid"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pandas" },
+    { name = "python-decouple" },
+    { name = "streamlit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f2/4d/4eee8055de97c1e12a8edb637c227119aea8e9e8dd0a462c547b7adc1815/streamlit_aggrid-1.2.1.tar.gz", hash = "sha256:3d4e9e7444e5d12f4577efce129c27933c499482d87d0a77bd331f6aa65f2709", size = 5669840, upload-time = "2025-11-23T22:30:23.036Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/49/abfc53612c8592de5a0760eafad2fa5265d5135e9fa486b56f37cc7cfcda/streamlit_aggrid-1.2.1-py3-none-any.whl", hash = "sha256:507a52e44913564da828fbbc4ca01d8c81a30fb8f6cce97c9dab4a30ec1e462d", size = 5733174, upload-time = "2025-11-23T22:30:14.077Z" },
 ]
 
 [[package]]
