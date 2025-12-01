@@ -2,6 +2,7 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 import base64
 import io
@@ -85,6 +86,35 @@ page_bg_img = '''
 st.markdown(page_bg_img, unsafe_allow_html=True)    
 
 st.set_page_config(page_title="Atlântico Digital", layout="wide")
+
+#-------------------------------------------------------------------
+# LOGO
+#-------------------------------------------------------------------
+
+# Define o caminho do GIF relativo ao arquivo atual
+gif_filename = Path(__file__).parent / "Atlantico.gif"
+
+# Converte o GIF e obtém a string Base64
+base64_gif = img_to_base64(gif_filename)
+
+GIF_WIDTH = 50
+
+if base64_gif:
+    gif_uri = f"data:image/gif;base64,{base64_gif}"
+    st.markdown(
+        f"""
+        <div style='display: flex; align-items: center;'>
+            <img src='{gif_uri}' width='{GIF_WIDTH}' style='vertical-align: middle; margin-right: 10px;'>
+            <h1 style='color:#0A4D8C; margin: 0;'>Atlântico Digital</h1>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(
+        "<h1 style='color:#0A4D8C;'>Atlântico Digital</h1>",
+        unsafe_allow_html=True
+    )
 
 #-------------------------------------------------------------------
 # UPLOAD ARQUIVO
@@ -324,35 +354,6 @@ top_n = st.sidebar.number_input(
 
 
 #-------------------------------------------------------------------
-# LOGO
-#-------------------------------------------------------------------
-
-# Define o caminho do GIF relativo ao arquivo atual
-gif_filename = Path(__file__).parent / "Atlantico.gif"
-
-# Converte o GIF e obtém a string Base64
-base64_gif = img_to_base64(gif_filename)
-
-GIF_WIDTH = 50
-
-if base64_gif:
-    gif_uri = f"data:image/gif;base64,{base64_gif}"
-    st.markdown(
-        f"""
-        <div style='display: flex; align-items: center;'>
-            <img src='{gif_uri}' width='{GIF_WIDTH}' style='vertical-align: middle; margin-right: 10px;'>
-            <h1 style='color:#0A4D8C; margin: 0;'>Atlântico Digital</h1>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-else:
-    st.markdown(
-        "<h1 style='color:#0A4D8C;'>Atlântico Digital</h1>",
-        unsafe_allow_html=True
-    )
-
-#-------------------------------------------------------------------
 # CARDS
 #-------------------------------------------------------------------
 
@@ -587,6 +588,29 @@ if selecoes.get("Tarefas Reabertas"):
     st.plotly_chart(fig2, use_container_width=True)
 
     # Apresentação dos dados em lista
+
+    st.markdown(
+        """
+        <style>
+        /* O seletor abaixo mira no contêiner que envolve o st.selectbox (widget de classe stSelectbox) */
+        div.stSelectbox {
+            border: 2px solid #4CAF50; /* Cor da borda: verde, espessura: 2px */
+            border-radius: 8px;      /* Borda arredondada */
+            padding: 10px;           /* Espaçamento interno */
+            margin-bottom: 20px;     /* Margem abaixo para separar da tabela */
+            background-color: #f0f8ff; /* Cor de fundo leve para destaque */
+        }
+        /* Opcional: Ajusta a margem do label do selectbox para ficar dentro do padding */
+        div.stSelectbox > label {
+            margin-top: -5px;
+            margin-left: 5px;
+            font-weight: bold;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )  
+      
     st.markdown("### Tarefas por Time Responsável")
 
     time = st.selectbox("Filtrar por Time Responsável:", ["(Todos)"] + sorted(
@@ -595,7 +619,6 @@ if selecoes.get("Tarefas Reabertas"):
         .astype(str)
         .unique()
         ))
-
 
     df_view = df_reabertas_sim if time == "(Todos)" else df_reabertas_sim[df_reabertas_sim['equipe_resp'] == time]
 
