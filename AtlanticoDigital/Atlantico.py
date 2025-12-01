@@ -9,7 +9,6 @@ import os
 from pathlib import Path 
 from thefuzz import process, fuzz
 from datetime import datetime
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
 
 #streamlit run "/Users/margarida/Documents/Curso Python/Educ360/repo/Educ360/AtlanticoDigital/Atlantico.py"
