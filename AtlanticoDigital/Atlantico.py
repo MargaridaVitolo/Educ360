@@ -602,7 +602,7 @@ if selecoes.get("Tarefas Reabertas"):
     df_view['esforco_registrado'] = df_view['esforco_registrado'].apply(decimal_para_hora_min)
 
     coluna_formatada = {
-    'tipo_tarefa': st.column_config.TextColumn("Tarefa"),
+    'tipo_tarefa': st.column_config.TextColumn("Tarefa",width=170),
     'equipe_resp': st.column_config.TextColumn("Equipe Responsável"),
     'para': st.column_config.TextColumn("Responsável"),
     'dt_fechada': st.column_config.DateColumn("Fechada em:", format='DD/MM/YYYY'),
@@ -816,13 +816,13 @@ if selecoes.get("SLA"):
     df_outliers['diferenca_horas'] = (df_outliers['dt_fechada'] - df_sla['dt_entrega_desejada']).dt.total_seconds() / 3600
 
     coluna_formatada = {
-    'cliente': st.column_config.TextColumn("Cliente"),
-    'tipo_tarefa': st.column_config.TextColumn("Tarefa"),
-    'equipe': st.column_config.TextColumn("Equipe Responsável"),
-    'para': st.column_config.TextColumn("Responsável"),
-    'dt_entrega_desejada': st.column_config.DateColumn("Data Entrega Desejada", format='DD/MM/YYYY'),
-    'dt_fechada': st.column_config.DateColumn("Data Fechada", format='DD/MM/YYYY'),
-    'diferenca_horas': st.column_config.NumberColumn("Diferença(h)", format='%.2f')
+    'cliente': st.column_config.TextColumn("Cliente", width=170),
+    'tipo_tarefa': st.column_config.TextColumn("Tarefa", width=70),
+    'equipe': st.column_config.TextColumn("Equipe Responsável", width=70),
+    'para': st.column_config.TextColumn("Responsável", width=120),
+    'dt_entrega_desejada': st.column_config.DateColumn("Data Entrega Desejada", format='DD/MM/YYYY', width=20),
+    'dt_fechada': st.column_config.DateColumn("Data Fechada", format='DD/MM/YYYY', width=20),
+    'diferenca_horas': st.column_config.NumberColumn("Diferença(h)", format='%.2f', width=10)
     }
 
     st.dataframe(
