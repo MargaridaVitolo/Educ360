@@ -610,7 +610,7 @@ if selecoes.get("Tarefas Reabertas"):
         """,
         unsafe_allow_html=True
     )  
-      
+
     st.markdown("### Tarefas por Time Responsável")
 
     time = st.selectbox("Filtrar por Time Responsável:", ["(Todos)"] + sorted(
